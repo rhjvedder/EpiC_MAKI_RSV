@@ -2,15 +2,16 @@
 # source("https://bioconductor.org/biocLite.R")
 # install.packages("RColorBrewer")
 # biocLite("minfi")
-# 1biocLite("minfiDataEPIC")
+# biocLite("minfiDataEPIC")
 library(minfi)
 library(minfiData)
 library(RColorBrewer)
 library(IlluminaHumanMethylationEPICmanifest)
 library(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
 
-# example data EpiC 850K
+sink("log.txt")
 
+# example data EpiC 850K
 loc <- "minfiDataEPIC"
 norma <- "ssNoob"
 
@@ -19,6 +20,10 @@ base.dir <- system.file("extdata", package = loc)
 list.files(base.dir)
 targets <- read.metharray.sheet(base.dir)
 rg.set <- read.metharray.exp(targets = targets)
+manifest <- getManifest(rg.set)
+print("manifest")
+manifest
+print("---------------------------------------------------------------------")
 
 # Annotation
 ann850k <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
@@ -27,6 +32,7 @@ ann850k <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
 total.samples <- nrow(rg.set)
 
 # QC on signal detection removing samples with detection p-values over 0.05
+print("QC on signal detection removing samples with detection p-values over 0.05")
 det.p <- detectionP(rg.set)
 keep <- colMeans(det.p) < 0.05
 rg.set <- rg.set[,keep]
@@ -45,6 +51,7 @@ if(norma == "Funnorm") {
 }
 
 # plots showing normalizing before and after
+png("normalizing.png")
 par(mfrow=c(1,2))
 densityPlot(rg.set, sampGroups=targets$Sample_Group,main="Raw", legend=FALSE)
 legend("top", legend = levels(factor(targets$Sample_Group)),
@@ -53,6 +60,9 @@ densityPlot(getBeta(m.set.sq), sampGroups=targets$Sample_Group,
             main="Normalized", legend=FALSE)
 legend("top", legend = levels(factor(targets$Sample_Group)),
        text.col=brewer.pal(8,"Dark2"))
+print("---------------------------------------------------------------------")
+dev.off()
+print("---------------------------------------------------------------------")
 
 # ensure probes are in the same order in the m.set.sq and det.p objects
 det.p <- det.p[match(featureNames(m.set.sq),rownames(det.p)),]
@@ -64,40 +74,64 @@ table(keep)
 
 # add sex to samples
 predicted.sex <- getSex(m.set.sq.flt, cutoff = -2)
+png("predicted_sex.png")
 plotSex(predicted.sex)
+print("---------------------------------------------------------------------")
+dev.off()
+print("---------------------------------------------------------------------")
 #m.set.sq.flt <- addSex(m.set.sq.flt, predicted.sex$predictedSex)
 
 # if your data includes males and females, remove probes on the sex chromosomes
+print("if your data includes males and females, remove probes on the sex chromosomes")
 keep <- !(featureNames(m.set.sq.flt) %in% ann850k$Name[ann850k$chr %in% c("chrX","chrY")])
 m.set.sq.flt <- m.set.sq.flt[keep,]
 table(keep)
+print("---------------------------------------------------------------------")
 
 # filter cross reactive probes
+print("filter cross reactive probes")
 reactive.probes <- read.csv(file="1-s2.0-S221359601630071X-mmc1.csv", sep="\t", stringsAsFactors=FALSE)
 keep <- !(featureNames(m.set.sq.flt) %in% reactive.probes$IlmnID)
 m.set.sq.flt <- m.set.sq.flt[keep,]
 table(keep)
+print("---------------------------------------------------------------------")
 
 # filter polymorphic targets
-
+print("filter polymorphic probes")
 polymorphic.probes <- read.csv(file="1-s2.0-S221359601630071X-mmc2.csv", sep="\t", stringsAsFactors=FALSE)
 keep <- !(featureNames(m.set.sq.flt) %in% polymorphic.probes$IlmnID)
 m.set.sq.flt <- m.set.sq.flt[keep,]
 table(keep)
-removed.samples <- total.samples - nrow(m.set.sq.flt)
+print("---------------------------------------------------------------------")
+
 
 # remove probes with SNPs at CpG site
+print("remove probes with SNPs at CpG sites")
 m.set.sq.flt <- dropLociWithSnps(m.set.sq.flt, maf=0.05)
-# original number of probes
-total.samples
-# remaining number of probes
-print(total.samples - removed.samples)
+print("---------------------------------------------------------------------")
 
-# at a filtering step to take out certain SNPs with rsxxxxx
-# load the list probably or search for SNPs with /\
-# remove them
+
+# filtering step to take out certain SNPs starting with 'rs'
+print("filtering step to take out certain SNPs starting with 'rs'")
 keep <- !(grepl("rs", featureNames(m.set.sq.flt)))
 m.set.sq.flt <- m.set.sq.flt[keep,]
 table(keep)
+print("---------------------------------------------------------------------")
 # maybe change the order of filtering and normalizing
+
+# original number of probes
+print("original amount of probes")
+total.samples
+# remaining number of probes
+removed.samples <- total.samples - nrow(m.set.sq.flt)
+remaining.samples <- total.samples - removed.samples
+print("remaining number of probes")
+remaining.samples
+print("---------------------------------------------------------------------")
+
+# Analysis
+
+beta <- getBeta(m.set.sq.flt)
+M <- apply(beta, 1:2, function(p) {p/(1-p)})
+sink()
 
