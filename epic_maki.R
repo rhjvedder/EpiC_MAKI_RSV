@@ -13,26 +13,21 @@ library(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
 args = commandArgs(trailingOnly=TRUE)
 
 # test if there is at least one argument: if not, return an error
-if (length(args)!=3) {
+if (length(args)!=4) {
   stop("This script needs an output dir, input dir and a normalizing method [ssNoob|Funnorm|Quantile].n", call.=FALSE)
 }
 
-# sink("/home/umcg-rhjvedder/Logs/log.txt")
-sink("log.txt")
+sink("/home/umcg-rhjvedder/Logs/log.txt")
 start.time <- Sys.time()
 
 # example data EpiC 850K
-#loc.out <- args[1]
-#loc.data <- args[2]
-loc <- "minfiDataEPIC"
-#norma = args[5]
-norma <- "ssNoob"
+loc.out <- args[1]
+loc.data <- args[2]
+norma = args[3]
 
 # loading data
-base.dir <- system.file("extdata", package = loc)
-list.files(base.dir)
-targets <- read.metharray.sheet(base.dir)
-rg.set <- read.metharray.exp(targets = targets)
+targets <- read.metharray.sheet(file.path(paste(loc.data, "SampleSheets", sep = "/")))
+rg.set <- read.metharray.exp(file.path(paste(loc.data, "ImageData", sep = "/"), targets=targets))
 manifest <- getManifest(rg.set)
 print("manifest")
 manifest
@@ -64,7 +59,7 @@ if(norma == "Funnorm") {
 }
 
 # plots showing normalizing before and after
-png("normalizing.png")
+png(paste(loc.out, "normalizing.png", sep = "/"))
 par(mfrow=c(1,2))
 densityPlot(rg.set, sampGroups=targets$Sample_Group,main="Raw", legend=FALSE)
 legend("top", legend = levels(factor(targets$Sample_Group)),
@@ -87,12 +82,12 @@ table(keep)
 
 # add sex to samples
 predicted.sex <- getSex(m.set.sq.flt, cutoff = -2)
-png("predicted_sex.png")
+png(paste(loc.out, "predicted_sex.png", sep = "/"))
 plotSex(predicted.sex)
 print("---------------------------------------------------------------------")
 dev.off()
 print("---------------------------------------------------------------------")
-#m.set.sq.flt <- addSex(m.set.sq.flt, predicted.sex$predictedSex)
+m.set.sq.flt <- addSex(m.set.sq.flt, predicted.sex$predictedSex)
 
 # remove samples of which the reported sex does not equal the sex chromosomes
 ## some code
@@ -106,7 +101,7 @@ print("---------------------------------------------------------------------")
 
 # filter cross reactive probes
 print("filter cross reactive probes")
-reactive.probes <- read.csv(file="1-s2.0-S221359601630071X-mmc1.csv", sep="\t", stringsAsFactors=FALSE)
+reactive.probes <- read.csv(file="/home/umcg-rhjvedder/Rscript/1-s2.0-S221359601630071X-mmc1.csv", sep="\t", stringsAsFactors=FALSE)
 keep <- !(featureNames(m.set.sq.flt) %in% reactive.probes$IlmnID)
 m.set.sq.flt <- m.set.sq.flt[keep,]
 table(keep)
@@ -114,7 +109,7 @@ print("---------------------------------------------------------------------")
 
 # filter polymorphic targets
 print("filter polymorphic probes")
-polymorphic.probes <- read.csv(file="1-s2.0-S221359601630071X-mmc2.csv", sep="\t", stringsAsFactors=FALSE)
+polymorphic.probes <- read.csv(file="/home/umcg-rhjvedder/Rscript/1-s2.0-S221359601630071X-mmc2.csv", sep="\t", stringsAsFactors=FALSE)
 keep <- !(featureNames(m.set.sq.flt) %in% polymorphic.probes$IlmnID)
 m.set.sq.flt <- m.set.sq.flt[keep,]
 table(keep)
@@ -144,7 +139,7 @@ remaining.samples <- total.samples - removed.samples
 print("remaining number of probes")
 remaining.samples
 print("---------------------------------------------------------------------")
-save(m.set.sq.flt, file = "epic_maki.Rdata")
+save(m.set.sq.flt, file = paste(loc.out, "epic_maki.Rdata", sep = "/"))
 
 # Analysis
 beta <- getBeta(m.set.sq.flt)
