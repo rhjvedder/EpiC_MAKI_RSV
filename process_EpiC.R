@@ -10,6 +10,7 @@ library(IlluminaHumanMethylationEPICmanifest)
 library(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
 
 sink("log.txt")
+ptm <- proc.time()
 
 # example data EpiC 850K
 loc <- "minfiDataEPIC"
@@ -81,6 +82,9 @@ dev.off()
 print("---------------------------------------------------------------------")
 #m.set.sq.flt <- addSex(m.set.sq.flt, predicted.sex$predictedSex)
 
+# remove samples of which the reported sex does not equal the sex chromosomes
+## some code
+
 # if your data includes males and females, remove probes on the sex chromosomes
 print("if your data includes males and females, remove probes on the sex chromosomes")
 keep <- !(featureNames(m.set.sq.flt) %in% ann850k$Name[ann850k$chr %in% c("chrX","chrY")])
@@ -128,10 +132,34 @@ remaining.samples <- total.samples - removed.samples
 print("remaining number of probes")
 remaining.samples
 print("---------------------------------------------------------------------")
+save(m.set.sq.flt, file = "epic_maki.Rdata")
 
 # Analysis
 
 beta <- getBeta(m.set.sq.flt)
-M <- apply(beta, 1:2, function(p) {p/(1-p)})
+m <- getM(m.set.sq.flt)
+
+# remove outliers
+remove_outliers <- function(x, na.rm = TRUE) {
+  qnt <- quantile(x, probs=c(.25, .75), na.rm = na.rm)
+  extreme <- 3.0 * IQR(x, na.rm = na.rm)
+  y <- x
+  y[x < (qnt[1] - extreme)] <- NA
+  y[x > (qnt[2] + extreme)] <- NA
+  y
+}
+
+M <- apply(m, 1, remove_outliers)
+# amount of extreme outliers
+print("The amount of extreme outliers:")
+which(is.na(M))
+print("---------------------------------------------------------------------")
+
+# idea for analyzing, show a histogram with the amount difference between probes
+
+# time the run for later runnin' purposses
+print("script took:")
+proc.time() - ptm
+
 sink()
 
