@@ -1,3 +1,4 @@
+#!/usr/bin/env Rscript
 # installation of bioconductor, minfi and loading of libraries
 # source("https://bioconductor.org/biocLite.R")
 # install.packages("RColorBrewer")
