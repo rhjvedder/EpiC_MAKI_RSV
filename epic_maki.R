@@ -6,6 +6,7 @@
 # biocLite("minfiDataEPIC")
 library(minfi)
 library(minfiData)
+library(foreign)
 library(RColorBrewer)
 library(IlluminaHumanMethylationEPICmanifest)
 library(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
@@ -18,7 +19,7 @@ if (length(args)!=4) {
   stop("This script needs an output dir, input dir and a normalizing method [ssNoob|Funnorm|Quantile].n", call.=FALSE)
 }
 
-sink("/home/umcg-rhjvedder/Logs/log.txt")
+sink("/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Logs/log.txt")
 start.time <- Sys.time()
 
 # example data EpiC 850K
@@ -32,6 +33,7 @@ rg.set <- read.metharray.exp(file.path(paste(loc.data, "ImageData", sep = "/"), 
 manifest <- getManifest(rg.set)
 print("manifest")
 manifest
+Phenotype <- read.spss("/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Rscript/MAKI_Phenotype_Data.sav", to.data.frame = TRUE)
 print("---------------------------------------------------------------------")
 
 # Annotation
@@ -91,7 +93,15 @@ print("---------------------------------------------------------------------")
 m.set.sq.flt <- addSex(m.set.sq.flt, predicted.sex$predictedSex)
 
 # remove samples of which the reported sex does not equal the sex chromosomes
-## some code
+# keep only the phenotype data of the samples
+Phenotype <- Phenotype[Phenotype$Trailnummer %in% m.set.sq.flt$Sample_Name,]
+# order the Phenotype data to the methyl set
+Phenotype <- Phenotype[m.set.sq.flt$Sample_Name,]
+# compare the phenotypes to the predicted data, which can indicate errors in lab
+keep <- m.set.sq.flt$predictedSex == Phenotype$Geslacht
+m.set.sq.flt <- m.set.sq.flt[keep,]
+table(keep)
+print("---------------------------------------------------------------------")
 
 # if your data includes males and females, remove probes on the sex chromosomes
 print("if your data includes males and females, remove probes on the sex chromosomes")
@@ -102,7 +112,7 @@ print("---------------------------------------------------------------------")
 
 # filter cross reactive probes
 print("filter cross reactive probes")
-reactive.probes <- read.csv(file="/home/umcg-rhjvedder/Rscript/1-s2.0-S221359601630071X-mmc1.csv", sep="\t", stringsAsFactors=FALSE)
+reactive.probes <- read.csv(file="/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Rscript/1-s2.0-S221359601630071X-mmc1.csv", sep="\t", stringsAsFactors=FALSE)
 keep <- !(featureNames(m.set.sq.flt) %in% reactive.probes$IlmnID)
 m.set.sq.flt <- m.set.sq.flt[keep,]
 table(keep)
@@ -110,7 +120,7 @@ print("---------------------------------------------------------------------")
 
 # filter polymorphic targets
 print("filter polymorphic probes")
-polymorphic.probes <- read.csv(file="/home/umcg-rhjvedder/Rscript/1-s2.0-S221359601630071X-mmc2.csv", sep="\t", stringsAsFactors=FALSE)
+polymorphic.probes <- read.csv(file="/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Rscript/1-s2.0-S221359601630071X-mmc2.csv", sep="\t", stringsAsFactors=FALSE)
 keep <- !(featureNames(m.set.sq.flt) %in% polymorphic.probes$IlmnID)
 m.set.sq.flt <- m.set.sq.flt[keep,]
 table(keep)
@@ -157,6 +167,7 @@ remove_outliers <- function(x, na.rm = TRUE) {
 }
 
 M <- apply(m, 1, remove_outliers)
+save(M, file = paste(loc.out, "M_Values_Maki.Rdata", sep = "/"))
 # amount of extreme outliers
 print("The amount of extreme outliers:")
 which(is.na(M))
@@ -169,4 +180,3 @@ print("script took:")
 Sys.time() - start.time
 # stop logging
 sink()
-
