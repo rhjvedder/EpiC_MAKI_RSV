@@ -30,17 +30,18 @@ norma = args[3]
 # loading data
 targets <- read.metharray.sheet(file.path(paste(loc.data, "SampleSheets", sep = "/")))
 rg.set <- read.metharray.exp(file.path(paste(loc.data, "ImageData", sep = "/"), targets=targets))
+save(rg.set, file = paste(loc.out, "epic_maki_rg_set.Rdata", sep = "/"))
 manifest <- getManifest(rg.set)
 print("manifest")
 manifest
-Phenotype <- read.spss("/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Rscript/MAKI_Phenotype_Data.sav", to.data.frame = TRUE)
+Phenotype <- read.csv("/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Rscript/Age_at_MAKI_III_nasal_sampling_17_Jan_2018.csv")
 print("---------------------------------------------------------------------")
 
 # Annotation
 ann850k <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
 
 # note original total amount of samples
-total.samples <- nrow(rg.set)
+total.probes <- nrow(rg.set)
 
 # QC on signal detection removing samples with detection p-values over 0.05
 print("QC on signal detection removing samples with detection p-values over 0.05")
@@ -143,14 +144,14 @@ print("---------------------------------------------------------------------")
 
 # original number of probes
 print("original amount of probes")
-total.samples
+total.probes
 # remaining number of probes
-removed.samples <- total.samples - nrow(m.set.sq.flt)
-remaining.samples <- total.samples - removed.samples
+removed.probes <- total.probes - nrow(m.set.sq.flt)
+remaining.probes <- total.probes - removed.probes
 print("remaining number of probes")
-remaining.samples
+remaining.probes
 print("---------------------------------------------------------------------")
-save(m.set.sq.flt, file = paste(loc.out, "epic_maki.Rdata", sep = "/"))
+save(m.set.sq.flt, file = paste(loc.out, "epic_maki_filtered_meth.Rdata", sep = "/"))
 
 # Analysis
 beta <- getBeta(m.set.sq.flt)
