@@ -15,7 +15,7 @@ if (length(args)!= 2) {
   stop("the last argument has to be a normalizing method [ssNoob|Funnorm|Quantile]")
 }
 
-sink("/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Logs/log_3.txt")
+sink("/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Logs/log_3.log")
 start.time <- Sys.time()
 
 # example data EpiC 850K

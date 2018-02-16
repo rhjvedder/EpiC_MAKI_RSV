@@ -33,6 +33,12 @@ base.dir <- system.file("extdata", package = loc)
 list.files(base.dir)
 targets <- read.metharray.sheet(base.dir)
 rg.set <- read.metharray.exp(targets = targets)
+
+save(rg.set, targets, file = "rgset.Rdata")
+
+
+
+
 manifest <- getManifest(rg.set)
 print("manifest")
 manifest

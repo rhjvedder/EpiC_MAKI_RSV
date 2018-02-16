@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
 
+biocLite("minfi")
 library(minfi)
 
 # load in cml arguments
@@ -10,7 +11,7 @@ if (length(args)!= 2) {
   stop("This script needs an output dir and an input dir.n", call.=FALSE)
 }
 
-sink("/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Logs/log_0.txt")
+sink("/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Logs/log_0.log")
 start.time <- Sys.time()
 
 # get command line input
@@ -18,8 +19,8 @@ loc.out <- args[1]
 loc.data <- args[2]
 
 # loading data
-targets <- read.metharray.sheet(file.path(paste(loc.data, "SampleSheets", sep = "/")))
-rg.set <- read.metharray.exp(file.path(paste(loc.data, "ImageData", sep = "/"), targets=targets))
+targets <- read.metharray.sheet(file.path(loc.data), pattern = "*.csv", recursive = TRUE)
+rg.set <- read.metharray.exp(file.path(loc.data), targets=targets)
 save(rg.set, targets, file = paste(loc.out, "epic_maki_rg_set.Rdata", sep = "/"))
 
 # time the run for later runnin' purposses

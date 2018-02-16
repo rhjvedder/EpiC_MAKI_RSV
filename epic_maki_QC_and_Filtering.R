@@ -1,5 +1,8 @@
 #!/usr/bin/env Rscript
 
+biocLite("IlluminaHumanMethylationEPICmanifest")
+biocLite("IlluminaHumanMethylationEPICanno.ilm10b2.hg19")
+
 library(minfi)
 library(IlluminaHumanMethylationEPICmanifest)
 library(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
@@ -12,7 +15,7 @@ if (length(args)!= 1) {
   stop("This script needs an output dir.n", call.=FALSE)
 }
 
-sink("/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Logs/log_1.txt")
+sink("/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Logs/log_1.log")
 start.time <- Sys.time()
 
 # example data EpiC 850K
