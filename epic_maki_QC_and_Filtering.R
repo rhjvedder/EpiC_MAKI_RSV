@@ -1,25 +1,16 @@
 #!/usr/bin/env Rscript
-
+source("https://bioconductor.org/biocLite.R")
 biocLite("IlluminaHumanMethylationEPICmanifest")
 biocLite("IlluminaHumanMethylationEPICanno.ilm10b2.hg19")
-
 library(minfi)
 library(IlluminaHumanMethylationEPICmanifest)
 library(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
-
-# load in cml arguments
-args = commandArgs(trailingOnly=TRUE)
-
-# test if there is at least one argument: if not, return an error
-if (length(args)!= 1) {
-  stop("This script needs an output dir.n", call.=FALSE)
-}
 
 sink("/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Logs/log_1.log")
 start.time <- Sys.time()
 
 # example data EpiC 850K
-loc.out <- args[1]
+loc.out <- "/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Data"
 
 # loading data
 load(file = paste(loc.out, "epic_maki_rg_set.Rdata", sep = "/"))

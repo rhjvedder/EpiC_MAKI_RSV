@@ -1,26 +1,14 @@
 #!/usr/bin/env Rscript
-
 library(minfi)
 library(RColorBrewer)
 library(IlluminaHumanMethylationEPICmanifest)
 library(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
 
-# load in cml arguments
-args = commandArgs(trailingOnly=TRUE)
-
-# test if there are at least two arguments: if not, return an error
-if (length(args)!= 2) {
-  stop("This script needs an output dir and a normalizing method [ssNoob|Funnorm|Quantile].n", call.=FALSE)
-} else if (!(args[2] %in% c("ssNoob", "Funnorm", "Quantile"))) {
-  stop("the last argument has to be a normalizing method [ssNoob|Funnorm|Quantile]")
-}
-
 sink("/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Logs/log_3.log")
 start.time <- Sys.time()
 
 # example data EpiC 850K
-loc.out <- args[1]
-norma = args[2]
+loc.out <- "/groups/umcg-griac/tmp03/projects/umcg-rhjvedder/Data"
 
 # load data
 load(file = paste(loc.out, "epic_maki_filtered_meth_set.Rdata", sep = "/"))
