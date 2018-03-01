@@ -11,9 +11,10 @@ start.time <- Sys.time()
 loc.out <- "/data/f114798/Data"
 
 # loading data
-load(file = paste("/data/f114798/Data", "epic_maki_rg_set.Rdata", sep = "/"))
+load(file = paste(loc.out, "epic_maki_rg_set.Rdata", sep = "/"))
+qc.total.probes <- nrow(rg.set)
 manifest <- getManifest(rg.set)
-print("manifesrt")
+print("manifest")
 manifest
 Phenotype <- read.csv("/data/f114798/Rscripts/Phenotype_data_Maki.csv")
 print("---------------------------------------------------------------------")
@@ -21,18 +22,14 @@ print("---------------------------------------------------------------------")
 # Annotation
 ann850k <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
 
-# note original total amount of samples
-qc.probes.colnames <- c("Detect p-value", "Failed Probes", "Probes X/Y", "Cross Reactive", "Polymorphic Pr", "Probes SNPs@CpGs", "Probes with 'rs'")
-qc.samples.colnames <- c("Detect p-value", "Gender check")
-qc.total.probes <- nrow(rg.set)
-
 # QC on signal detection removing samples with detection p-values over 0.05
 print("QC on signal detection removing samples with detection p-values over 0.05")
 det.p <- detectionP(rg.set)
+save(det.p, file=paste(loc.out, "epic_maki_detP.Rdata", sep="/"))
 
 # remove sample if more then 20% of probes failed on the sample
 bad.samples <- colMeans(det.p > 0.01) > 0.05
-removed.sample.names.detP <- colnames(det.p[,bad.samples])
+bad.sample.names.detP <- colnames(det.p[,bad.samples])
 rg.set <- rg.set[,!bad.samples]
 targets <- targets[!bad.samples,]
 det.p <- det.p[,!bad.samples]
@@ -41,31 +38,19 @@ table(bad.samples)
 # remove any probes that have failed in 50% of samples
 bad.probes <- rowMeans(det.p > 0.01) > 0.1
 table(bad.probes)
-bad.probes.names.detP <- rownames(det.p[bad.probes,])
+bad.probe.names.detP <- rownames(det.p[bad.probes,])
 
 save(det.p, file=paste(loc.out, "epic_maki_detP.Rdata", sep="/"))
-save(rg.set, file=paste(loc.out, "epic_maki_rgSet_postDetP.Rdata", sep="/"))
+save(rg.set, targets, file=paste(loc.out, "epic_maki_rgSet_postDetP.Rdata", sep="/"))
 #save 
 
 # add sex to samples
 m.set <- preprocessRaw(rg.set)
 gm.set <- mapToGenome(m.set)
-save(gm.set, file=paste(loc.out, "epic_maki_gmSet.Rdata", sep="/"))
-
-qc <- getQC(m.set)
-png(paste(loc.out, "qc_plot.png", sep="/"))
-plotQC(qc)
-print("---------------------------------------------------------------------")
-dev.off()
-print("---------------------------------------------------------------------")
-qcReport(rg.set, pdf= paste(loc.out, "qcReport.pdf", sep = "/"))
+save(m.set, targets, file=paste(loc.out, "epic_maki_mSet.Rdata", sep="/"))
+save(gm.set, targets, file=paste(loc.out, "epic_maki_gmSet.Rdata", sep="/"))
 
 predicted.sex <- getSex(gm.set, cutoff = -2)
-png(paste(loc.out, "predicted_sex.png", sep = "/"))
-plotSex(predicted.sex)
-print("---------------------------------------------------------------------")
-dev.off()
-print("---------------------------------------------------------------------")
 gm.set <- addSex(gm.set, predicted.sex$predictedSex)
 
 # remove samples of which the reported sex does not equal the sex chromosomes
@@ -74,6 +59,8 @@ gm.set <- addSex(gm.set, predicted.sex$predictedSex)
 gm.set$Sample_Name <- toupper(gm.set$Sample_Name)
 samples.gm <- data.frame(Sample=gm.set$Sample_Name, Gender=gm.set$predictedSex, stringsAsFactors = FALSE)
 samples.in <- data.frame(Sample=Phenotype[,2], Number=rep(1, length(Phenotype[,2])), Gender=Phenotype[,6], stringsAsFactors = FALSE)
+
+save(gm.set, targets, file=paste(loc.out, "epic_maki_gmSet_wPS.Rdata", sep="/"))
 
 samples.good <- apply(samples.gm, 1, function(x) {
   if (x[1] %in% samples.in$Sample) {
@@ -91,65 +78,110 @@ samples.good <- apply(samples.gm, 1, function(x) {
   z
 })
 
-bad.samples.names <- samples.gm$Sample[!samples.good]
+# PC of X chromosomes
+sex.chromosome.probes <- featureNames(gm.set) %in% ann850k$Name[ann850k$chr %in% "chrX"]
+x.chromosome.probes <- gm.set[sex.chromosome.probes,]
+x.beta <- getBeta(x.chromosome.probes)
+##  prop is % variance explained
+samples.code <- sapply(rownames(x.beta), function(x) {as.character(gm.set$Sample_Name[gm.set$Basename==x])})
+x.pheno <- sapply(samples.code, function(x) {
+  gender <- samples.in$Gender[samples.in$Sample==x]
+  if(!is.null(gender) && length(gender) == 1 && !is.na(gender)) {
+    if (gender=="F") {
+      y <- "F"
+    } else if (gender=="M") {
+      y <- "M"
+    } else {
+      y <- NA
+    }
+  } else {
+    y <- NA
+  }
+  y
+})
+x.pca.Color <- sapply(x.pheno, function(x) {
+  if (!is.na(x)) {
+    if (x=="F") {
+      y <- "red"
+    } else if (x=="M") {
+      y <- "blue"
+    } else {
+      y <- "grey"
+    }
+  } else {
+    y <- "grey"
+  }
+  y
+})
+## the row of data should be samples. the default setting center=TRUE and scale=FALSE
+out <- prcomp(x.beta)
+##  change 1 or 2 , you can get different plots
+prop<-out$sdev^2 / sum(out$sdev^2) 
+png(paste(loc.out, "pca_gender_prcomp.png", sep = "/"))
+plot(out$x[,1],out$x[,2],xlab="PC1",ylab="PC2", main="PCA of Gender", col=x.pca.Color)
+print("---------------------------------------------------------------------")
+dev.off()
+
+bad.samples.names.gender <- samples.gm$Sample[!samples.good]
+print(bad.samples.names.gender)
+
+bad.samples.selection <- rownames(gm.set[,!samples.good])
+bad.samples.beta <- x.beta[,colnames(x.beta)==bad.samples.selection]
+for (col in 1:ncol(bad.samples.data)) {
+  bad.sample.name <- colnames(bad.samples.data[,col])
+  png(paste(loc.out, "Gender_histograms", paste(bad.sample.name, "_histogram.png"), sep = "/"))
+    hist(bad.samples.data[,col], main=paste("Histogram of ", bad.sample.name, "'s X chromosome beta values")))
+  dev.off()
+}
+
 good.samples.names <- samples.gm$Sample[samples.good]
 table(samples.good)
 gm.set <- gm.set[,samples.good]
 targets <- targets[samples.good,]
 print("---------------------------------------------------------------------")
 
-# PC of X chromosomes
-sex.chromosome.probes <- featureNames(gm.set) %in% ann850k$Name[ann850k$chr %in% "chrX")]
-x.chromosome.probes <- gm.set[sex.chromosome.probes,]
-x.beta <- getBeta(x.chromosome.probes)
-x.beta <- na.omit(x.beta)
-x.beta <- t(x.beta)
-x.covmat <- cov(x.beta)
-x.eig <- eigen(x.covmat)
-
-
-
-png(paste(loc.out, "predicted_sex_postGenderCheck.png", sep = "/"))
-plotSex(gm.set$predictedSex)
-print("---------------------------------------------------------------------")
-dev.off()
-
 # if your data includes males and females, remove probes on the sex chromosomes
 print("if your data includes males and females, remove probes on the sex chromosomes")
 keep <- !(featureNames(gm.set) %in% ann850k$Name[ann850k$chr %in% c("chrX","chrY")])
+bad.probe.names.xy <- rownames(gm.set[!keep,])
 gm.set <- gm.set[keep,]
 table(keep)
 print("---------------------------------------------------------------------")
 
 # filter cross reactive probes
 print("filter cross reactive probes")
-reactive.probes <- read.csv(file="/data/f114798/Rscripts/1-s2.0-S221359601630071X-mmc1.csv", sep="\t", stringsAsFactors=FALSE)
+reactive.probes <- read.csv(file="/data/f114798/Rscripts/1-s2.0-S221359601630071X-mmc2.csv", sep="\t", stringsAsFactors=FALSE)
 keep <- !(featureNames(gm.set) %in% reactive.probes$IlmnID)
+bad.probe.names.cr <- rownames(gm.set[!keep,])
 gm.set <- gm.set[keep,]
 table(keep)
 print("---------------------------------------------------------------------")
 
 # filter polymorphic targets
 print("filter polymorphic probes")
-polymorphic.probes <- read.csv(file="/data/f114798/Rscripts/1-s2.0-S221359601630071X-mmc2.csv", sep="\t", stringsAsFactors=FALSE)
-keep <- !(featureNames(gm.set) %in% polymorphic.probes$IlmnID)
+polymorphic.probes <- read.csv(file="/data/f114798/Rscripts/1-s2.0-S221359601630071X-mmc1.csv", sep="\t", stringsAsFactors=FALSE)
+## $EUR_AF < 0.05 remove
+keep <- !(featureNames(gm.set) %in% polymorphic.probes$IlmnID[polymorphic.probes$EUR_AF<0.05])
+bad.probe.names.pm <- rownames(gm.set[!keep,])
 gm.set <- gm.set[keep,]
 table(keep)
 print("---------------------------------------------------------------------")
 
 
-# remove probes with SNPs at CpG site
-print("remove probes with SNPs at CpG sites")
-gm.set.a <- dropLociWithSnps(gm.set, maf=0.05)
-keep <- gm.set %in% gm.set.a
-table(keep)
-gm.set < gm.set.a
-print("---------------------------------------------------------------------")
+# remove probes with SNPs at CpG site ; same as above
+#print("remove probes with SNPs at CpG sites")
+#gm.set.a <- dropLociWithSnps(gm.set, maf=0.05)
+#keep <- rownames(gm.set) %in% rownames(gm.set.a)
+#bad.probe.names.SC <- rownames(gm.set[!keep,])
+#table(keep)
+#gm.set <- gm.set.a
+#print("---------------------------------------------------------------------")
 
 
 # filtering step to take out certain SNPs starting with 'rs'
 print("filtering step to take out certain SNPs starting with 'rs'")
 keep <- !(grepl("rs", featureNames(gm.set)))
+bad.probe.names.rs <- rownames(gm.set[!keep,])
 gm.set <- gm.set[keep,]
 table(keep)
 print("---------------------------------------------------------------------")
@@ -157,20 +189,44 @@ print("---------------------------------------------------------------------")
 
 # original number of probes
 print("original amount of probes")
-total.probes
+qc.total.probes
 # remaining number of probes
-removed.probes <- total.probes - nrow(gm.set)
-remaining.probes <- total.probes - removed.probes
+removed.probes <- qc.total.probes - nrow(gm.set)
+remaining.probes <- qc.total.probes - removed.probes
 print("remaining number of probes")
 remaining.probes
 
+# note original total amount of samples
+qc.probes.colnames <- c("Detect p-value", "Failed Probes", "Probes X/Y", "Cross Reactive", "Polymorphic Pr", "Probes SNPs@CpGs", "Probes with 'rs'")
+qc.samples.colnames <- c("Detect p-value", "Gender check")
 
-pdf("qcTable.pdf", height=11, width=8.5)
-grid.table(qc.df)
+nbr_sampl <- function(x) {return(if (is.null(x)) {0} else {length(x)})}
+nam_sampl <- function(x) {return(if (is.null(x)) {"No Samples removed"} else {x})}
+
+qc.s.df <- data.frame(amount_detP=nbr_sampl(bad.sample.names.detP), 
+                      amount_Gender=nbr_sampl(bad.sample.names.gender))
+colnames(qc.s.df) <- qc.samples.colnames
+pdf(paste(loc.out, "qc_Sample_Table.pdf", sep = "/"), height=11, width=8.5)
+grid.table(qc.s.df)
 dev.off()
+print("---------------------------------------------------------------------")
+print("removed on detection p-value")
+print(nam_sampl(bad.sample.names.detP))
+print("removed on gender")
+print(nam_sampl(bad.samples.names.gender))
+print("---------------------------------------------------------------------")
+qc.p.df <- data.frame(nbr_sampl(bad.probe.names.detP), nbr_sampl(bad.probe.names.xy), nbr_sampl(bad.probe.names.cr), nbr_sampl(bad.probe.names.pm), nbr_sampl(bad.probe.names.SC), nbr_sampl(bad.probe.names.rs))
+colnames(qc.p.df) <- qc.probes.colnames
+pdf(paste(loc.out, "qc_Probe_Table.pdf", sep = "/"), height=11, width=8.5)
+grid.table(qc.p.df)
+dev.off()
+bad.probe.names.all <- c(nam_sampl(bad.probe.names.detP), nam_sampl(bad.probe.names.xy), nam_sampl(bad.probe.names.cr), nam_sampl(bad.probe.names.pm), nam_sampl(bad.probe.names.SC), nam_sampl(bad.probe.names.rs))
+pdf(paste(loc.out, "qc_bad_probes.pdf", sep = "/"))
+print(bad.probe.names.all)
+def.off()
 
 print("---------------------------------------------------------------------")
-rg.set.flt <- rg.set.flt[rg.set.flt %in% gm.set]
+rg.set.flt <- rg.set[rg.set %in% gm.set]
 save(rg.set.flt, targets, file = paste(loc.out, "epic_maki_filtered_rg_set.Rdata", sep = "/"))
 
 # time the run for later runnin' purposses
