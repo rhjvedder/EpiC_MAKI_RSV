@@ -13,8 +13,6 @@ load(file=paste(loc.out, "epic_maki_gmSet_wPS.Rdata", sep="/"))
 samples.gm <- data.frame(Sample=gm.set$Sample_Name, Gender=gm.set$predictedSex, stringsAsFactors = FALSE)
 samples.in <- data.frame(Sample=Phenotype[,2], Number=rep(1, length(Phenotype[,2])), Gender=Phenotype[,6], stringsAsFactors = FALSE)
 
-save(gm.set, targets, file=paste(loc.out, "epic_maki_gmSet_wPS.Rdata", sep="/"))
-
 samples.good <- apply(samples.gm, 1, function(x) {
   if (x[1] %in% samples.in$Sample) {
     i <- samples.in$Number[samples.in$Sample==x[1]]
@@ -56,7 +54,6 @@ x.pheno <- sapply(samples.code, function(x) {
 # use pca from chen and compare to a scaled beta
 x.covmat <- cov(x.beta)
 x.eig <- eigen(x.covmat)
-save(x.eig, x.beta, file=paste(loc.out, "x.data.Rdata", sep="/"))
 100*cumsum(x.eig$values[1:15])/sum(x.eig$values)
 prj <- as.matrix(x.beta) %*% x.eig$vectors
 x.pca <- data.frame(PC1=prj[,1], PC2=prj[,2], PG=x.pheno)
@@ -82,11 +79,12 @@ dev.off()
 bad.samples.names.gender <- samples.gm$Sample[!samples.good]
 print(bad.samples.names.gender)
 
-bad.samples.selection <- rownames(gm.set[,!samples.good])
-bad.samples.beta <- x.beta[,colnames(x.beta)==bad.samples.selection]
-for (col in 1:ncol(bad.samples.data)) {
-  bad.sample.name <- colnames(bad.samples.data[,col])
-  png(paste(loc.out, "Gender_histograms", paste(bad.sample.name, "_histogram.png"), sep = "/"))
-    hist(bad.samples.data[,col], main=paste("Histogram of ", bad.sample.name, "'s X chromosome beta values")))
+bad.samples.selection <- gm.set$Basename[!samples.good]
+bad.samples.data <- x.beta[rownames(x.beta) %in% bad.samples.selection,]
+# bad.samples.data <- apply(x.beta, 1, bad.samples.data)
+
+for (row in 1:nrow(bad.samples.data)) {
+  png(paste(loc.out, "Gender_histograms", paste(bad.samples.selection[row], "_histogram.png"), sep = "/"))
+    hist(bad.samples.data[row,], main=paste("Histogram of ", bad.samples.selection[row], "'s X chromosome beta values"))
   dev.off()
 }
