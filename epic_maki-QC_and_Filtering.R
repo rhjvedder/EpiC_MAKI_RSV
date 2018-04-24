@@ -3,6 +3,7 @@ library(minfi)
 library(IlluminaHumanMethylationEPICmanifest)
 library(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
 library(RColorBrewer)
+library(ggplot2)
 library(gridExtra)
 
 # This file contains functions for the pipeline to process 850k epic illumina data
@@ -122,14 +123,11 @@ x.pca.Color <- sapply(x.pheno, function(x) {
   y
 })
 ## the row of data should be samples. the default setting center=TRUE and scale=FALSE
-out <- prcomp(x.beta)
+pca.out <- prcomp(x.beta)
 ##  change 1 or 2 , you can get different plots
 prop<-out$sdev^2 / sum(out$sdev^2) 
-png(paste(loc.out, "pca_gender_prcomp.png", sep = "/"))
-plot(out$x[,1],out$x[,2],xlab="PC1",ylab="PC2", main="PCA of Gender", col=x.pca.Color)
-abline(v=-4, col="red")
-abline(v=10, col="red")
-print("---------------------------------------------------------------------")
+png(paste(loc.out, "pca_x_gender_prcomp.png", sep = "/"))
+ggplot(pca.out$x,aes(x=PC1,y=PC2,col=Phenotype.samples$Gender)) + geom_point(size=3,alpha=0.5) + labs(title="PCA plot of Gender, no controls, X chromosomes", x=paste("PC1 (", round(prop[1]*100, 2), "%)"), y=paste("PC2 (", round(prop[2]*100, 2), "%)"), colour="Gender")
 dev.off()
 
 # select out any samples which aren't grouped in with male or female

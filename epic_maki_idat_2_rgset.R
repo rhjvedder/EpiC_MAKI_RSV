@@ -18,7 +18,7 @@ save(det.p, file=paste(loc.out, "Detection_Pvalues.Rdata", sep="/"))
 # remove sample if more then 20% of probes failed on the sample
 bad.samples <- colMeans(det.p > 0.01) > 0.05
 bad.sample.names.detP <- colnames(det.p[,bad.samples])
-bad.sample.detp.rs <- data.frame(CallRate=colMeans(det.p[,bad.samples] > 0.01))
+bad.sample.detp.rs <- data.frame(CallRate=1-colMeans(det.p[,bad.samples] > 0.01))
 rownames(bad.sample.detp.rs) <- rg.set$Sample_Name[rg.set$Basename %in% bad.sample.names.detP]
 write.csv(bad.sample.detp.rs, file=paste(loc.out, "Bad_Samples_CallRate.csv", sep="/"))
 targets <- targets[!bad.samples,]
