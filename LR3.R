@@ -84,7 +84,7 @@ pvalue<- all.results[,4]
 names(pvalue)<- as.character(all.results[,1])
 padjust<- p.adjust(pvalue,"fdr")
 png(file=paste0("qqplot_",filename,".png"),width = 600, height = 600)
-qqPlot(pvalue, main="QQ of methylation model Prevention = Meth + Batch + Covariates")
+qqPlot(pvalue, main="QQ of methylation model Intervention = Meth + Batch + Covariates")
 t<-estlambda(pvalue, method="median",plot=F)
 t<- t[[1]]
 lamda<- round(t,digit=3)

@@ -98,7 +98,7 @@ pvalue <- all.results[,4]
 names(pvalue)<- as.character(all.results[,1])
 padjust <- p.adjust(pvalue, "fdr")
 png(file=paste0("qqplot_",filename,".png"),width = 600, height = 600)
-qqPlot(pvalue, main="QQ of methylation model Asthma = Meth + Batch + Proxy Variables")
+qqPlot(pvalue, main="QQ of methylation model Asthma = Meth + Batch + Covariables\n + Proxy Variables")
 t<-estlambda(pvalue, method="median",plot=F)
 t<- t[[1]]
 lamda<- round(t,digit=3)
@@ -106,7 +106,7 @@ text (2,5, paste0("lambda=",lamda))
 dev.off()
 
 num.bonfer<- length(which(p.adjust(pvalue,method="bonferroni")<0.05))
-num.cpg <- max(20,num.bonfer)
+num.cpg <- max(100,num.bonfer)
 cpgnamei<- names(sort(pvalue))[1:num.cpg]
 Gindex<- apply(as.matrix(cpgnamei), 1, function(x)  which(annot$Name==x))
 genelist<- as.character(annot[Gindex,22])
@@ -122,14 +122,10 @@ Ci<- apply(all.results, 1, function(x)  which(annot$Name==x[1]))
 BP <- as.numeric(annot$pos[Ci])
 P <- as.numeric(all.results[,4])
 CHR <- as.numeric(substring(annot$chr[Ci], 4))
-cpg.all <- cbind(BP, CHR, P)
-cpg.all$CHR <- as.factor(cpg.all$CHR)
+cpg.all <- data.frame(BP, CHR, P)
 colnames(cpg.all) <- c("BP", "CHR", "P")
 rownames(cpg.all) <- rownames(all.results)
 save(cpg.all, file=paste0("cpg_all_", filename, ".Rdata"))
 png(file=paste0("manhattan_plot_", filename, ".png"))
-manhattan(cpg.all, chr=cpg.all$CHR, main="manhattan of methylation model Asthma = Meth + Batch")
+manhattan(cpg.all, main="manhattan of methylation model Asthma = Meth + Batch + Covariables\n + Proxy Variables")
 dev.off()
-
-
-
