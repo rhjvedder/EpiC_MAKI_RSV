@@ -13,7 +13,7 @@ start.time <- Sys.time()
 loc.out <- "/data/f114798/Data"
 
 # load data
-load(file=paste(loc.out, "epic_maki_ Quantile _meth_set.Rdata", sep = "/"))
+load(file=paste(loc.out, "epic_maki_Quantile_meth_set.Rdata", sep = "/"))
 load(file=paste(loc.out, "epic_maki_filtered_gm_set.Rdata", sep = "/"))
 Phenotype <- read.csv("/data/f114798/Rscripts/Phenotype_data_Maki.csv")
 targets$Sample_Plate <- trimws(targets$Sample_Plate, "r")
