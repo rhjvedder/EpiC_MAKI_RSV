@@ -11,6 +11,7 @@ loc <- "/data/f114798/"
 loc.pca <- "Data/Norm_PCA"
 loc.rgdata <- "Data/RG_data"
 loc.data <- "Data/meth_set"
+loc.comp <- "Complementary_data"
 setwd(loc)
 
 # load data

@@ -21,6 +21,7 @@ load(file=paste(loc.rgdata, "RG_Channel_Set_Clean.Rdata", sep = "/"))
 probes <- read.csv(paste(loc.comp, 'filtered_probes.csv', sep = "/"), stringsAsFactors = FALSE)
 probes <- c(probes[,1], probes[,2], probes[,3], probes[,4], probes[,5])
 probes <- unique(probes)
+probes <- probes[!(probes=="")]
 l.p <- length(probes)
 l.m <- length(rownames(rg.set))
 l.m - l.p
@@ -47,8 +48,10 @@ m.set.sq$Sample_Name <- as.vector(sapply(m.set.sq$Sample_Name, function(x) {
   y
 }, simplify=T))
 
-m.set.flt <- m.set.sq[rownames(m.set.sq) %in% probes,]
+m.set.flt <- m.set.sq[!(rownames(m.set.sq) %in% probes),]
 m.set.flt <- m.set.flt[,m.set.flt$Sample_Name!="CONTROL_M"]
+print("remaining")
+length(rownames(m.set.flt))
 targets <- targets[targets$Sample_Name %in% m.set.flt$Sample_Name,]
 dim(m.set.flt)
 

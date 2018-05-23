@@ -18,7 +18,7 @@ targets$Sample_Plate <- trimws(targets$Sample_Plate, "r")
 norms <- c("Funnorm", "ssNoob", "Quantile")
 
 norms.sets <- sapply(norms, function(norma) {
-  load(paste(loc.data, paste("epic_maki_", norma, "_meth_set.Rdata"), sep = "/"))
+  load(paste(loc.data, paste0("epic_maki_", norma, "_meth_set.Rdata"), sep = "/"))
   return(m.set.sq)
 })
 

@@ -23,6 +23,7 @@ setwd(loc)
 
 load(file=paste(loc.mdata, "MAKI_trimmed_M.Rdata", sep="/"))
 M_matrix<- M.val
+rm(M.val)
 phenotype <- read.csv(paste(loc.comp, "Phenotype_data_Maki.csv", sep = "/"))
 phenotype <- data.frame(Sample=phenotype[,2], Gender=phenotype[,6], Wheeze=phenotype[,20], Asthma=phenotype[,21], Age=phenotype[,28], stringsAsFactors=False)
 n <- length(targets$Sample_Name)
@@ -86,6 +87,7 @@ names(all.results)<-c("probeID","BETA","SE", "P_VAL")
 ## M_matrix<-t(M_matrix)
 all.results<-all.results[match(colnames(M_matrix),all.results$probeID),]
 all.results$N<-colSums(!is.na(M_matrix))
+rm(M_matrix)
 
 # chr
 filename <- "MAKI_trimmed_M_glm_model_3"

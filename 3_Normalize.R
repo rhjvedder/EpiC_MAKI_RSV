@@ -10,6 +10,7 @@ library(IlluminaHumanMethylationEPICanno.ilm10b2.hg19)
 loc <- "/data/f114798/"
 loc.idat <- "Data/ImageData"
 loc.sheet <- "Samplesheets"
+loc.qc <- "Data/QC"
 loc.rgdata <- "Data/RG_data"
 loc.data <- "Data/meth_set"
 setwd(loc)

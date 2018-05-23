@@ -60,7 +60,7 @@ gm.set$Sample_Name <- toupper(gm.set$Sample_Name)
 samples.gm <- data.frame(Sample=gm.set$Sample_Name, Gender=gm.set$predictedSex, Basename=gm.set$Basename, stringsAsFactors = FALSE)
 samples.in <- data.frame(Sample=Phenotype[,2], Number=rep(1, length(Phenotype[,2])), Gender=Phenotype[,6], stringsAsFactors = FALSE)
 
-save(gm.set, targets, file=paste(loc.rgset, "epic_maki_gmSet_wPS.Rdata", sep="/"))
+save(gm.set, targets, file=paste(loc.rgdata, "epic_maki_gmSet_wPS.Rdata", sep="/"))
 
 samples.good <- apply(samples.gm, 1, function(x) {
   if (x[1] %in% samples.in$Sample) {
@@ -257,7 +257,7 @@ bad.probe.names.xy <- rownames(gm.set[!keep,])
 table(keep)
 
 # filter cross reactive probes
-reactive.probes1 <- read.csv(file=paste("loc.comp", "1-s2.0-S221359601630071X-mmc3.txt", sep="/"), sep="\t", stringsAsFactors=FALSE)
+reactive.probes1 <- read.csv(file=paste(loc.comp, "1-s2.0-S221359601630071X-mmc3.txt", sep="/"), sep="\t", stringsAsFactors=FALSE)
 reactive.probes1 <- unlist(reactive.probes1)
 keep <- !(featureNames(gm.set) %in% reactive.probes1)
 bad.probe.names.cr <- rownames(gm.set[!keep,])
@@ -265,7 +265,7 @@ table(keep)
 
 # filter cross reactive probes
 print("filter cross reactive probes")
-reactive.probes <- read.csv(file=paste("loc.comp", "1-s2.0-S221359601630071X-mmc2.csv", sep="/"), sep="\t", stringsAsFactors=FALSE)
+reactive.probes <- read.csv(file=paste(loc.comp, "1-s2.0-S221359601630071X-mmc2.csv", sep="/"), sep="\t", stringsAsFactors=FALSE)
 reactive.probes <- unlist(reactive.probes)
 keep <- !(featureNames(gm.set) %in% reactive.probes)
 bad.probe.names.cr <- c(bad.probe.names.cr, rownames(gm.set[!keep,]))
@@ -273,7 +273,7 @@ table(keep)
 
 # filter polymorphic targets
 print("filter polymorphic probes")
-polymorphic.probes <- read.csv(file=paste("loc.comp", "1-s2.0-S221359601630071X-mmc1.csv", sep="/"), sep="\t", stringsAsFactors=FALSE)
+polymorphic.probes <- read.csv(file=paste(loc.comp, "1-s2.0-S221359601630071X-mmc1.csv", sep="/"), sep="\t", stringsAsFactors=FALSE)
 ## $EUR_AF < 0.05 remove
 keep <- !(featureNames(gm.set) %in% polymorphic.probes$IlmnID[polymorphic.probes$EUR_AF>0.05])
 bad.probe.names.pm <- rownames(gm.set[!keep,])
@@ -311,8 +311,3 @@ pdf(paste(loc.qc, "qc_Probe_Table.pdf", sep = "/"), height=11, width=8.5)
 grid.table(qc.p.df)
 dev.off()
 bad.probe.names.all <- c(nam_sampl(bad.probe.names.detP), nam_sampl(bad.probe.names.xy), nam_sampl(bad.probe.names.cr), nam_sampl(bad.probe.names.pm))
-sink()
-sink("/data/f114798/Data/qc_bad_probes.csv")
-print(bad.probe.names.all)
-sink()
-sink("/data/f114798/Logs/log_qc_p2.log")

@@ -25,7 +25,7 @@ setwd(loc)
 
 load(file=paste(loc.mdata, "MAKI_trimmed_M.Rdata", sep="/"))
 M_matrix<- M.val
-phenotype <- read.csv(paste(loc.comp, "Phenotype_data_Maki.csv", sep = "/")))
+phenotype <- read.csv(paste(loc.comp, "Phenotype_data_Maki.csv", sep = "/"))
 phenotype <- data.frame(Sample=phenotype[,2], Gender=phenotype[,6], Wheeze=phenotype[,20], FEV05=phenotype[,26], Age=phenotype[,28], stringsAsFactors=False)
 n <- length(targets$Sample_Name)
 phenotype1 <- data.frame(Basename=rep(NA, n), Sample=rep(NA, n), Gender=rep("", n), Wheeze=rep(NA, n), FEV05=rep(NA, n), Age=rep(NA, n), Batch=rep(NA, n), stringsAsFactors=FALSE)
