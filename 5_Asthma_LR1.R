@@ -21,7 +21,7 @@ loc.comp <- "Complementary_data"
 loc.mdata <- "Data/M_Values"
 loc.model <- "Data/Models/model_2_Asthma"
 setwd(loc)
-
+load(file=paste(loc.comp, "png_settings.Rdata", sep="/"))
 load(file=paste(loc.mdata, "MAKI_trimmed_M.Rdata", sep="/"))
 M_matrix<- M.val
 phenotype <- read.csv(paste(loc.comp, "Phenotype_data_Maki.csv", sep = "/"))
@@ -88,8 +88,8 @@ library(GWASTools)
 pvalue<- all.results[,4]
 names(pvalue)<- as.character(all.results[,1])
 padjust<- p.adjust(pvalue,"fdr")
-png(file=paste(loc.model, paste0("qqplot_",filename,".png"), sep="/"), width=1000, height=1000)
-qqPlot(pvalue, main="QQ of methylation model Asthma = Meth + Batch + Covariates", cex=2)
+png(file=paste(loc.model, paste0("qqplot_",filename,".png"), sep="/"), width=png.w, height=png.h)
+qqPlot(pvalue, main="QQ of methylation model Asthma = Meth + Batch + Covariates", cex.lab=font.mp, cex.axis=font.mp, cex.main=font.mp, cex.sub=font.mp)
 t <- estlambda(pvalue, method="median",plot=F)
 t <- t[[1]]
 lamda <- round(t,digit=3)

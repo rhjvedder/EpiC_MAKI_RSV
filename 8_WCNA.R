@@ -3,8 +3,12 @@ library(WGCNA)
 library(plyr)
 library(parallel)
 library(matrixStats)
+library(GO.db)
+library(AnnotationDbi)
+library(org.Hs.eg.db)
 options(stringsAsFactors = FALSE)
 # set the locations of important files
+enableWGCNAThreads(nThreads = 24)
 loc <- "/data/f114798/"
 loc.comp <- "Complementary_data"
 loc.mdata <- "Data/M_Values"
@@ -51,30 +55,30 @@ M_matrix[k] <- rowMedians(M_matrix, na.rm=TRUE)[k[,1]]
 M_matrix<- t(M_matrix)
 
 # Choose a set of soft-thresholding powers
-powers = c(c(1:10), seq(from = 12, to=20, by=2))
+#powers = c(c(1:10), seq(from = 12, to=20, by=2))
 # Call the network topology analysis function
-sft = pickSoftThreshold(M_matrix, dataIsExpr=TRUE, powerVector=powers, verbose=5, networkType="signed")
+#sft = pickSoftThreshold(M_matrix, dataIsExpr=TRUE, powerVector=powers, verbose=5, networkType="signed")
 
-png(file=paste(loc.wcna, "SFT_wgcna_u.png", sep="/"), width=1980, height=1080)
-par(mfrow = c(1,2))
-cex1 = 0.9
+#png(file=paste(loc.wcna, "SFT_wgcna_u.png", sep="/"), width=1980, height=1080)
+#par(mfrow = c(1,2))
+#cex1 = 0.9
 # Scale-free topology fit index as a function of the soft-thresholding power
-plot(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
-     xlab="Soft Threshold (power)",ylab="Scale Free Topology Model Fit,signed R^2",type="n",
-     main = paste("Scale independence"));
-text(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
-     labels=powers,cex=cex1,col="red");
+#plot(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+#     xlab="Soft Threshold (power)",ylab="Scale Free Topology Model Fit,signed R^2",type="n",
+#     main = paste("Scale independence"));
+#text(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+#     labels=powers,cex=cex1,col="red");
 # this line corresponds to using an R^2 cut-off of h
-abline(h=0.90,col="red")
+#abline(h=0.90,col="red")
 # Mean connectivity as a function of the soft-thresholding power
-plot(sft$fitIndices[,1], sft$fitIndices[,5],
-     xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n",
-     main = paste("Mean connectivity"))
-text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
-dev.off()
+#plot(sft$fitIndices[,1], sft$fitIndices[,5],
+#     xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n",
+#     main = paste("Mean connectivity"))
+#text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
+#dev.off()
 setwd(loc.wcna)
 beta <- 5
-net <- blockwiseModules(M_matrix, power=beta, TOMType="signed", minModuleSize=100, reassignThreshold=0, mergeCutHeight=0.25, numericLabels=TRUE, pamRespectsDendro=FALSE, saveTOMs=TRUE, saveTOMFileBase="maki_tom", verbose=3)
+net <- blockwiseModules(M_matrix, power=beta, TOMType="signed", minModuleSize=200, reassignThreshold=0, mergeCutHeight=0.25, numericLabels=TRUE, pamRespectsDendro=FALSE, saveTOMs=TRUE, saveTOMFileBase="maki_tom", verbose=3, maxBlockSize=60000)
 setwd(loc)
 # Convert labels to colors for plotting
 mergedColors = labels2colors(net$colors)
@@ -107,3 +111,8 @@ par(mar = c(6, 8.5, 3, 3))
 # Display the correlation values within a heatmap plot
 labeledHeatmap(Matrix = moduleTraitCor, xLabels = names(phenotype), yLabels = names(MEs), ySymbols = names(MEs), colorLabels = FALSE, colors = greenWhiteRed(50), textMatrix = textMatrix, setStdMargins = FALSE, cex.text = 0.5, zlim = c(-1,1), main = paste("Module-trait relationships"))
 dev.off()
+
+GOenr = GOenrichmentAnalysis(moduleColors, allLLIDs, organism = "human", nBestP = 10)
+tab = GOenr$bestPTerms[[4]]$enrichment
+write.table(tab, file = paste(loc.wcna, "GOEnrichmentTable.csv", sep="/"), sep = ",", quote = TRUE, row.names = FALSE)
+
