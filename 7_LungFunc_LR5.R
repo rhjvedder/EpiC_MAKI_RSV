@@ -26,14 +26,16 @@ load(file=paste(loc.comp, "png_settings.Rdata", sep="/"))
 load(file=paste(loc.mdata, "MAKI_trimmed_M.Rdata", sep="/"))
 M_matrix<- M.val
 phenotype <- read.csv(paste(loc.comp, "Phenotype_data_Maki.csv", sep = "/"))
-phenotype <- data.frame(Sample=phenotype[,2], Gender=phenotype[,6], Wheeze=phenotype[,20], FEV05=phenotype[,26], Age=phenotype[,28], stringsAsFactors=False)
+phenotype <- data.frame(Sample=phenotype[,2], Gender=phenotype[,6], Wheeze=phenotype[,20], FEV05=phenotype[,26], Age=phenotype[,28], SmokingPregnancy=phenotype[,10], stringsAsFactors=False)
 n <- length(targets$Sample_Name)
-phenotype1 <- data.frame(Basename=rep(NA, n), Sample=rep(NA, n), Gender=rep("", n), Wheeze=rep(NA, n), FEV05=rep(NA, n), Age=rep(NA, n), Batch=rep(NA, n), stringsAsFactors=FALSE)
+phenotype1 <- data.frame(Basename=rep(NA, n), Sample=rep(NA, n), Gender=rep("", n), Wheeze=rep(NA, n), FEV05=rep(NA, n), Age=rep(NA, n), Batch=rep(NA, n), SmokingPregnancy=rep(NA, n), stringsAsFactors=FALSE)
 for (i in 1:n) {
   x <- targets[i,]
   y <- phenotype[phenotype$Sample==targets[i,1],]
-  phenotype1[i,] <- c(x[8], x[1], y[2], y[3], y[4], y[5], x[3])
+  phenotype1[i,] <- c(x[8], x[1], y[2], y[3], y[4], y[5], x[3], y[6])
 }
+phenotype1$SmokingPregnancy <- as.factor(phenotype1$SmokingPregnancy)
+phenotype1$SmokingPregnancy[phenotype1$SmokingPregnancy==2] <- 0
 # plates are x[3] slides are x[6]
 phenotype <- phenotype1
 M_matrix <- M_matrix
@@ -41,7 +43,7 @@ double.samples <- phenotype$Basename[which(duplicated(phenotype$Sample))]
 phenotype <- phenotype[!duplicated(phenotype$Sample),]
 
 # make a model specific dataframe
-PHENO <- phenotype[,c("FEV05", "Batch", "Age", "Gender")]
+PHENO <- phenotype[,c("FEV05", "Batch", "Age", "Gender", "SmokingPregnancy")]
 # rename the rows and drop the levels from the dataframe
 PHENO <- droplevels(PHENO) ; rownames(PHENO)<- phenotype[,"Sample"]
 PHENO <- PHENO[!is.na(PHENO$FEV05),]
@@ -59,9 +61,9 @@ colnames(M_matrix) <- phenotype$Sample[phenotype$Basename==colnames(M_matrix)]
 
 # create a model and use sva to compare it against the null model
 
-RLMtest= function(methcol, meth_matrix, Y, X1, X2, X3) {
+RLMtest= function(methcol, meth_matrix, Y, X1, X2, X3, X4) {
   
-  mod= rlm(as.numeric(Y)~meth_matrix[, methcol]+X1+X2+X3,maxit=200)
+  mod= rlm(as.numeric(Y)~meth_matrix[, methcol]+X1+X2+X3+X4,maxit=200)
   cf = try(coeftest(mod, vcov=vcovHC(mod, type="HC0")))
   if (class(cf)=="try-error") {
     bad <- as.numeric(rep(NA, 3))
@@ -74,7 +76,7 @@ RLMtest= function(methcol, meth_matrix, Y, X1, X2, X3) {
 }
 M_matrix<- t(M_matrix)
 M_matrix <- M_matrix[rownames(M_matrix) %in% rownames(PHENO),]
-system.time(ind.res <- mclapply(setNames(seq_len(ncol(M_matrix)), dimnames(M_matrix)[[2]]), RLMtest, meth_matrix=M_matrix, Y=PHENO$FEV05, X1=PHENO$Batch, X2=PHENO$Age, X3=PHENO$Gender, mc.cores=12))
+system.time(ind.res <- mclapply(setNames(seq_len(ncol(M_matrix)), dimnames(M_matrix)[[2]]), RLMtest, meth_matrix=M_matrix, Y=PHENO$FEV05, X1=PHENO$Batch, X2=PHENO$Age, X3=PHENO$Gender, X4=PHENO$SmokingPregnancy, mc.cores=12))
 
 all.results<-ldply(ind.res,rbind)
 names(all.results)<-c("probeID","BETA","SE", "P_VAL")
@@ -102,7 +104,7 @@ qqPlot(pvalue, main="QQ of methylation model FEV05 = Meth + Batch + Covariates",
 t<-estlambda(pvalue, method="median",plot=F)
 t<- t[[1]]
 lamda<- round(t,digit=3)
-text (2,5, paste0("lambda=",lamda))
+text (2,5, paste0("lambda=",lamda), cex=font.mp)
 dev.off()
 
 num.bonfer<- length(which(p.adjust(pvalue,method="bonferroni")<0.05))

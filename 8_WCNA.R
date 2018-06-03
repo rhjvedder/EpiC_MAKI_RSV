@@ -3,19 +3,17 @@ library(WGCNA)
 library(plyr)
 library(parallel)
 library(matrixStats)
-library(GO.db)
-library(AnnotationDbi)
-library(org.Hs.eg.db)
 options(stringsAsFactors = FALSE)
 # set the locations of important files
-enableWGCNAThreads(nThreads = 24)
+allowWGCNAThreads(nThreads = 24)
 loc <- "/data/f114798/"
 loc.comp <- "Complementary_data"
 loc.mdata <- "Data/M_Values"
 loc.wcna <- "Data/Wcna"
 setwd(loc)
 load(file=paste(loc.mdata, "MAKI_trimmed_M.Rdata", sep="/"))
-
+M_matrix <- M.val
+rm(M.val)
 phenotype <- read.csv(paste(loc.comp, "Phenotype_data_Maki.csv", sep = "/"))
 phenotype <- data.frame(Sample=phenotype[,2], Wheeze=phenotype[,20], Asthma=phenotype[,21], Prevention=phenotype[,27], FEV05=phenotype[,26], Gender=phenotype[,6], Age=phenotype[,28], IgE=phenotype[,19], Prednison=phenotype[,22], SmokingBirthMom=phenotype[,9], SmokingPregnacy=phenotype[,10], SmokingInsideBirth=phenotype[,12], stringsAsFactors=FALSE)
 n <- length(targets$Sample_Name)
@@ -35,12 +33,10 @@ for (i in 1:n) {
   phenotype1[i,] <- c(x[8], x[1], y[2], y[3], y[4], y[5], y[6], y[7], y[8], y[9], y[10], y[11], y[12])
 }
 # plates are x[3] slides are x[6]
-M_matrix <- M.val[,!(duplicated(targets$Sample_Name))]
 phenotype <- phenotype1[phenotype1$Basename %in% colnames(M_matrix),]
 phenotype$Sample <- NULL
 rownames(phenotype) <- phenotype$Basename
 phenotype$Basename <- NULL
-remove(M.val)
 phenotype$Wheeze[phenotype$Wheeze==2] <- 0
 phenotype$Asthma[phenotype$Asthma==2] <- 0
 phenotype$Prevention[phenotype$Prevention==2] <- 0
@@ -53,29 +49,33 @@ phenotype$SmokingInsideBirth[phenotype$SmokingInsideBirth==2] <- 0
 k <- which(is.na(M_matrix), arr.ind=TRUE)
 M_matrix[k] <- rowMedians(M_matrix, na.rm=TRUE)[k[,1]]
 M_matrix<- t(M_matrix)
+# select only probes with a variance higher than 1
+M_matrix <- as.matrix(M_matrix[which(apply(M_matrix,1,var)> 1 ),])
+
 
 # Choose a set of soft-thresholding powers
-#powers = c(c(1:10), seq(from = 12, to=20, by=2))
+powers = c(c(1:10), seq(from = 12, to=20, by=2))
 # Call the network topology analysis function
-#sft = pickSoftThreshold(M_matrix, dataIsExpr=TRUE, powerVector=powers, verbose=5, networkType="signed")
+sft = pickSoftThreshold(M_matrix, dataIsExpr=TRUE, powerVector=powers, verbose=5, networkType="signed")
 
-#png(file=paste(loc.wcna, "SFT_wgcna_u.png", sep="/"), width=1980, height=1080)
-#par(mfrow = c(1,2))
-#cex1 = 0.9
+png(file=paste(loc.wcna, "SFT_wgcna_u.png", sep="/"), width=1980, height=1080)
+par(mfrow = c(1,2))
+cex1 = 0.9
 # Scale-free topology fit index as a function of the soft-thresholding power
-#plot(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
-#     xlab="Soft Threshold (power)",ylab="Scale Free Topology Model Fit,signed R^2",type="n",
-#     main = paste("Scale independence"));
-#text(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
-#     labels=powers,cex=cex1,col="red");
+plot(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+     xlab="Soft Threshold (power)",ylab="Scale Free Topology Model Fit,signed R^2",type="n",
+     main = paste("Scale independence"));
+text(sft$fitIndices[,1], -sign(sft$fitIndices[,3])*sft$fitIndices[,2],
+     labels=powers,cex=cex1,col="red");
 # this line corresponds to using an R^2 cut-off of h
-#abline(h=0.90,col="red")
+abline(h=0.90,col="red")
 # Mean connectivity as a function of the soft-thresholding power
-#plot(sft$fitIndices[,1], sft$fitIndices[,5],
-#     xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n",
-#     main = paste("Mean connectivity"))
-#text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
-#dev.off()
+plot(sft$fitIndices[,1], sft$fitIndices[,5],
+     xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n",
+     main = paste("Mean connectivity"))
+text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
+dev.off()
+
 setwd(loc.wcna)
 beta <- 5
 net <- blockwiseModules(M_matrix, power=beta, TOMType="signed", minModuleSize=200, reassignThreshold=0, mergeCutHeight=0.25, numericLabels=TRUE, pamRespectsDendro=FALSE, saveTOMs=TRUE, saveTOMFileBase="maki_tom", verbose=3, maxBlockSize=60000)
@@ -111,8 +111,4 @@ par(mar = c(6, 8.5, 3, 3))
 # Display the correlation values within a heatmap plot
 labeledHeatmap(Matrix = moduleTraitCor, xLabels = names(phenotype), yLabels = names(MEs), ySymbols = names(MEs), colorLabels = FALSE, colors = greenWhiteRed(50), textMatrix = textMatrix, setStdMargins = FALSE, cex.text = 0.5, zlim = c(-1,1), main = paste("Module-trait relationships"))
 dev.off()
-
-GOenr = GOenrichmentAnalysis(moduleColors, allLLIDs, organism = "human", nBestP = 10)
-tab = GOenr$bestPTerms[[4]]$enrichment
-write.table(tab, file = paste(loc.wcna, "GOEnrichmentTable.csv", sep="/"), sep = ",", quote = TRUE, row.names = FALSE)
 

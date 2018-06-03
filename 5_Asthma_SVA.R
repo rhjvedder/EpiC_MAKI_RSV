@@ -25,26 +25,29 @@ load(file=paste(loc.mdata, "MAKI_trimmed_M.Rdata", sep="/"))
 M_matrix<- M.val
 rm(M.val)
 phenotype <- read.csv(paste(loc.comp, "Phenotype_data_Maki.csv", sep = "/"))
-phenotype <- data.frame(Sample=phenotype[,2], Gender=phenotype[,6], Wheeze=phenotype[,20], Asthma=phenotype[,21], Age=phenotype[,28], stringsAsFactors=False)
+phenotype <- data.frame(Sample=phenotype[,2], Gender=phenotype[,6], Wheeze=phenotype[,20], Asthma=phenotype[,21], Age=phenotype[,28], SmokingPregnancy=phenotype[,10], stringsAsFactors=False)
 n <- length(targets$Sample_Name)
-phenotype1 <- data.frame(Basename=rep(NA, n), Sample=rep(NA, n), Gender=rep("", n), Wheeze=rep(NA, n), Asthma=rep(NA, n), Age=rep(NA, n), Batch=rep(NA, n), stringsAsFactors=FALSE)
+phenotype1 <- data.frame(Basename=rep(NA, n), Sample=rep(NA, n), Gender=rep("", n), Wheeze=rep(NA, n), Asthma=rep(NA, n), Age=rep(NA, n), Batch=rep(NA, n), SmokingPregnancy=rep(NA, n), stringsAsFactors=FALSE)
 for (i in 1:n) {
   x <- targets[i,]
   y <- phenotype[phenotype$Sample==targets[i,1],]
-  phenotype1[i,] <- c(x[8], x[1], y[2], y[3], y[4], y[5], x[3])
+  phenotype1[i,] <- c(x[8], x[1], y[2], y[3], y[4], y[5], x[3], y[6])
 }
+phenotype1$SmokingPregnancy <- as.factor(phenotype1$SmokingPregnancy)
+phenotype1$SmokingPregnancy[phenotype1$SmokingPregnancy==2] <- 0
 # plates are x[3] slides are x[6]
 phenotype <- phenotype1
-M_matrix <- M_matrix
 double.samples <- phenotype$Basename[which(duplicated(phenotype$Sample))]
 phenotype <- phenotype[!duplicated(phenotype$Sample),]
 
 # make a model specific dataframe
-PHENO <- phenotype[,c("Asthma", "Batch", "Age", "Gender")]
+PHENO <- phenotype[,c("Asthma", "Batch", "Age", "Gender", "SmokingPregnancy")]
 # rename the rows and drop the levels from the dataframe
-PHENO <- droplevels(PHENO) ; rownames(PHENO)<- phenotype[,"Sample"]
+PHENO <- droplevels(PHENO)
+rownames(PHENO)<- phenotype[,"Sample"]
 PHENO <- PHENO[!is.na(PHENO$Asthma),]
 PHENO <- PHENO[!is.na(PHENO$Age),]
+PHENO <- PHENO[!is.na(PHENO$SmokingPregnancy),]
 # reinstitute the levels and factors
 PHENO$Batch <- as.factor(as.numeric(substring(PHENO$Batch, 7)))
 PHENO$Age <- round(PHENO$Age,2)
@@ -66,20 +69,20 @@ M_matrix2 <- M_matrix2[,colnames(M_matrix2) %in% rownames(PHENO)]
 mod1<-model.matrix(~.,PHENO)
 mod0<-model.matrix(~.,PHENO[,-1])
 # NA in phenotype data
-n.sv <- num.sv(dat=M_matrix, mod=mod1, method = 'leek') # using method leek to estimate number of SVs
+n.sv <- num.sv(dat=M_matrix2, mod=mod1, method = 'leek') # using method leek to estimate number of SVs
 # by setting n.sv=NULL in the function sva, the sva will estimate the number automaticly 
 svobj1= sva(M_matrix2, mod1, mod0, n.sv=n.sv)
 rm(M_matrix2)
 SVs = svobj1$sv
 colnames(SVs) <-paste0("sv",1:ncol(SVs))
 
-GLMtest <- function(methcol, meth_matrix,Y, X1, X2, X3, SV) {
-  mod = glm(Y~meth_matrix[, methcol] +X1+X2+X3+SV,family = "binomial")
+GLMtest <- function(methcol, meth_matrix,Y, X1, X2, X3, X4, SV) {
+  mod = glm(Y~meth_matrix[, methcol] +X1+X2+X3+X4+SV,family = "binomial")
   cf = summary(mod)$coefficients
   cf[2, c("Estimate", "Std. Error", "Pr(>|z|)")]  
 }
 M_matrix<- t(M_matrix)
-system.time(ind.res <- mclapply(setNames(seq_len(ncol(M_matrix)), dimnames(M_matrix)[[2]]), GLMtest, meth_matrix=M_matrix, Y=PHENO$Asthma, X1=PHENO$Batch, X2=PHENO$Age, X3=PHENO$Gender, SV<- SVs, mc.cores=12))
+system.time(ind.res <- mclapply(setNames(seq_len(ncol(M_matrix)), dimnames(M_matrix)[[2]]), GLMtest, meth_matrix=M_matrix, Y=PHENO$Asthma, X1=PHENO$Batch, X2=PHENO$Age, X3=PHENO$Gender, X4=PHENO$SmokingPregnancy, SV<- SVs, mc.cores=12))
 
 all.results<-ldply(ind.res,rbind)
 names(all.results)<-c("probeID","BETA","SE", "P_VAL")
@@ -108,7 +111,7 @@ qqPlot(pvalue, main="QQ of methylation model Asthma = Meth + Batch + Covariables
 t <- estlambda(pvalue, method="median",plot=F)
 t <- t[[1]]
 lamda <- round(t,digit=3)
-text(4,1, paste0("lambda=", lamda))
+text(4,1, paste0("lambda=", lamda), cex=font.mp)
 dev.off()
 
 num.bonfer<- length(which(p.adjust(pvalue,method="bonferroni")<0.05))

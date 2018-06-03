@@ -49,7 +49,11 @@ m.set.sq$Sample_Name <- as.vector(sapply(m.set.sq$Sample_Name, function(x) {
 }, simplify=T))
 
 m.set.flt <- m.set.sq[!(rownames(m.set.sq) %in% probes),]
+print("before control removal")
+dim(m.set.flt)
 m.set.flt <- m.set.flt[,m.set.flt$Sample_Name!="CONTROL_M"]
+print("after control removal")
+dim(m.set.flt)
 print("remaining")
 length(rownames(m.set.flt))
 targets <- targets[targets$Sample_Name %in% m.set.flt$Sample_Name,]
@@ -57,6 +61,9 @@ dim(m.set.flt)
 
 save(m.set.flt, file=paste(loc.data, "Methylation_Set.Rdata", sep="/"))
 M.val <- getM(m.set.flt)
+print("amount of duplicated data")
+colnames(M.val[,duplicated(targets$Sample_Name)])
+M.val <- M.val[,!(duplicated(targets$Sample_Name))]
 samplenames <- colnames(m.set.flt)
 removeOutliers<-function(probes){
   require(matrixStats)
@@ -76,7 +83,9 @@ removeOutliers<-function(probes){
 }
 
 system.time(OutlierResults<-removeOutliers(M.val))
-M.val2<-OutlierResults[[1]]
+M.val<-OutlierResults[[1]]
+print("data size after trimming")
+dim(M.val)
 Log<-OutlierResults[[2]]
 save(M.val, targets, file=paste(loc.mdata, "MAKI_trimmed_M.Rdata", sep="/"))
 save(Log, file=paste(loc.mdata, "Outlier_log_M.Rdata", sep="/"))

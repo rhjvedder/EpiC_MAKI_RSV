@@ -24,14 +24,16 @@ load(file=paste(loc.comp, "png_settings.Rdata", sep="/"))
 load(file=paste(loc.mdata, "MAKI_trimmed_M.Rdata", sep="/"))
 M_matrix<- M.val
 phenotype <- read.csv(paste(loc.comp, "Phenotype_data_Maki.csv", sep = "/"))
-phenotype <- data.frame(Sample=phenotype[,2], Gender=phenotype[,6], Wheeze=phenotype[,20], Prevention=phenotype[,27], Age=phenotype[,28], stringsAsFactors=False)
+phenotype <- data.frame(Sample=phenotype[,2], Gender=phenotype[,6], Wheeze=phenotype[,20], Prevention=phenotype[,27], Age=phenotype[,28], SmokingPregnancy=phenotype[,10], stringsAsFactors=False)
 n <- length(targets$Sample_Name)
-phenotype1 <- data.frame(Basename=rep(NA, n), Sample=rep(NA, n), Gender=rep("", n), Wheeze=rep(NA, n), Prevention=rep(NA, n), Age=rep(NA, n), Batch=rep(NA, n), stringsAsFactors=FALSE)
+phenotype1 <- data.frame(Basename=rep(NA, n), Sample=rep(NA, n), Gender=rep("", n), Wheeze=rep(NA, n), Prevention=rep(NA, n), Age=rep(NA, n), Batch=rep(NA, n), SmokingPregnancy=rep(NA, n), stringsAsFactors=FALSE)
 for (i in 1:n) {
   x <- targets[i,]
   y <- phenotype[phenotype$Sample==targets[i,1],]
-  phenotype1[i,] <- c(x[8], x[1], y[2], y[3], if(y[4]=="Palivizumab") {1} else {0}, y[5], x[3])
+  phenotype1[i,] <- c(x[8], x[1], y[2], y[3], if(y[4]=="Palivizumab") {1} else {0}, y[5], x[3], y[6])
 }
+phenotype1$SmokingPregnancy <- as.factor(phenotype1$SmokingPregnancy)
+phenotype1$SmokingPregnancy[phenotype1$SmokingPregnancy==2] <- 0
 # plates are x[3] slides are x[6]
 phenotype <- phenotype1
 M_matrix <- M_matrix
@@ -39,7 +41,7 @@ double.samples <- phenotype$Basename[which(duplicated(phenotype$Sample))]
 phenotype <- phenotype[!duplicated(phenotype$Sample),]
 
 # make a model specific dataframe
-PHENO <- phenotype[,c("Prevention", "Batch", "Age", "Gender")]
+PHENO <- phenotype[,c("Prevention", "Batch", "Age", "Gender", "SmokingPregnancy")]
 # rename the rows and drop the levels from the dataframe
 PHENO <- droplevels(PHENO) ; rownames(PHENO)<- phenotype[,"Sample"]
 PHENO <- PHENO[!is.na(PHENO$Prevention),]
@@ -57,14 +59,14 @@ colnames(M_matrix) <- phenotype$Sample[phenotype$Basename==colnames(M_matrix)]
 
 # create a model and use sva to compare it against the null model
 
-GLMtest <- function(methcol, meth_matrix,Y, X1, X2, X3) {
-  mod = glm(Y~meth_matrix[, methcol] +X1 +X2 +X3,family = "binomial")
+GLMtest <- function(methcol, meth_matrix,Y, X1, X2, X3, X4) {
+  mod = glm(Y~meth_matrix[, methcol] +X1 +X2 +X3 +X4,family = "binomial")
   cf = summary(mod)$coefficients
   cf[2, c("Estimate", "Std. Error", "Pr(>|z|)")]  
 }
 M_matrix<- t(M_matrix)
 M_matrix <- M_matrix[rownames(M_matrix) %in% rownames(PHENO),]
-system.time(ind.res <- mclapply(setNames(seq_len(ncol(M_matrix)), dimnames(M_matrix)[[2]]), GLMtest, meth_matrix=M_matrix, Y=PHENO$Prevention, X1=PHENO$Batch, X2=PHENO$Age, X3=PHENO$Gender, mc.cores=12))
+system.time(ind.res <- mclapply(setNames(seq_len(ncol(M_matrix)), dimnames(M_matrix)[[2]]), GLMtest, meth_matrix=M_matrix, Y=PHENO$Prevention, X1=PHENO$Batch, X2=PHENO$Age, X3=PHENO$Gender, X4=PHENO$SmokingPregnancy, mc.cores=12))
 
 all.results<-ldply(ind.res,rbind)
 names(all.results)<-c("probeID","BETA","SE", "P_VAL")
@@ -92,7 +94,7 @@ qqPlot(pvalue, main="QQ of methylation model Intervention = Meth + Batch + Covar
 t<-estlambda(pvalue, method="median",plot=F)
 t<- t[[1]]
 lamda<- round(t,digit=3)
-text (2,5, paste0("lambda=",lamda))
+text (2,5, paste0("lambda=",lamda), cex=font.mp)
 dev.off()
 
 num.bonfer<- length(which(p.adjust(pvalue,method="bonferroni")<0.05))

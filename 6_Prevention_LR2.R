@@ -91,7 +91,7 @@ qqPlot(pvalue, main="QQ of methylation model Intervention = Meth + Batch", cex.l
 t<-estlambda(pvalue, method="median",plot=F)
 t<- t[[1]]
 lamda<- round(t,digit=3)
-text (2,5, paste0("lambda=",lamda))
+text (2,5, paste0("lambda=",lamda), cex=font.mp)
 dev.off()
 
 num.bonfer<- length(which(p.adjust(pvalue,method="bonferroni")<0.05))
