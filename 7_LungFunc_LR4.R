@@ -72,6 +72,7 @@ RLMtest= function(methcol, meth_matrix, Y, X1) {
 }
 M_matrix<- t(M_matrix)
 M_matrix <- M_matrix[rownames(M_matrix) %in% rownames(PHENO),]
+write.table(data.frame(Pheno=dim(PHENO), Mval=dim(M_matrix)), file=paste(loc.model, "info.txt", sep="/"))
 system.time(ind.res <- mclapply(setNames(seq_len(ncol(M_matrix)), dimnames(M_matrix)[[2]]), RLMtest, meth_matrix=M_matrix, Y=PHENO$FEV05, X1=PHENO$Batch, mc.cores=12))
 
 all.results<-ldply(ind.res,rbind)

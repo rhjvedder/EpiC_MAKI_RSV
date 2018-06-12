@@ -61,6 +61,7 @@ dim(m.set.flt)
 
 save(m.set.flt, file=paste(loc.data, "Methylation_Set.Rdata", sep="/"))
 M.val <- getM(m.set.flt)
+B.val <- getBeta(m.set.flt)
 print("amount of duplicated data")
 colnames(M.val[,duplicated(targets$Sample_Name)])
 M.val <- M.val[,!(duplicated(targets$Sample_Name))]
@@ -88,4 +89,5 @@ print("data size after trimming")
 dim(M.val)
 Log<-OutlierResults[[2]]
 save(M.val, targets, file=paste(loc.mdata, "MAKI_trimmed_M.Rdata", sep="/"))
+save(B.val, targets, file=paste(loc.mdata, "MAKI_B_vals.Rdata", sep="/"))
 save(Log, file=paste(loc.mdata, "Outlier_log_M.Rdata", sep="/"))

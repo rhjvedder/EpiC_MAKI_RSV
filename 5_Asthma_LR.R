@@ -50,6 +50,7 @@ batch <- as.factor(PHENO$Batch) ## change coord form (1,2,3) to (1,2)
 PHENO$Batch <- as.factor(PHENO$Batch)
 PHENO[PHENO[,1]==2,1] <- 0
 
+
 # replace NA in M matrix with the median of the row
 k = which(is.na(M_matrix), arr.ind=TRUE)
 M_matrix[k] = rowMedians(M_matrix, na.rm=TRUE)[k[,1]]
@@ -65,6 +66,7 @@ GLMtest <- function(methcol, meth_matrix,Y, X1) {
 }
 M_matrix<- t(M_matrix)
 M_matrix <- M_matrix[rownames(M_matrix) %in% rownames(PHENO),]
+write.table(data.frame(Pheno=dim(PHENO), Mval=dim(M_matrix)), file=paste(loc.model, "info.txt", sep="/"))
 system.time(ind.res <- mclapply(setNames(seq_len(ncol(M_matrix)), dimnames(M_matrix)[[2]]), GLMtest, meth_matrix=M_matrix, Y=PHENO$Asthma, X1=PHENO$Batch, mc.cores=12))
 
 all.results<-ldply(ind.res,rbind)

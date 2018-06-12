@@ -82,6 +82,7 @@ GLMtest <- function(methcol, meth_matrix,Y, X1, X2, X3, X4, SV) {
   cf[2, c("Estimate", "Std. Error", "Pr(>|z|)")]  
 }
 M_matrix<- t(M_matrix)
+write.table(data.frame(Pheno=dim(PHENO), Mval=dim(M_matrix)), file=paste(loc.model, "info.txt", sep="/"))
 system.time(ind.res <- mclapply(setNames(seq_len(ncol(M_matrix)), dimnames(M_matrix)[[2]]), GLMtest, meth_matrix=M_matrix, Y=PHENO$Asthma, X1=PHENO$Batch, X2=PHENO$Age, X3=PHENO$Gender, X4=PHENO$SmokingPregnancy, SV<- SVs, mc.cores=12))
 
 all.results<-ldply(ind.res,rbind)

@@ -46,6 +46,7 @@ PHENO <- phenotype[,c("Asthma", "Batch", "Age", "Gender", "SmokingPregnancy")]
 # rename the rows and drop the levels from the dataframe
 PHENO <- droplevels(PHENO) ; rownames(PHENO)<- phenotype[,"Sample"]
 PHENO <- PHENO[!is.na(PHENO$Asthma),]
+PHENO <- PHENO[!is.na(PHENO$SmokingPregnancy),]
 # reinstitute the levels and factors
 PHENO$Batch <- as.factor(PHENO$Batch)
 PHENO$Age <- as.numeric(PHENO$Age)
@@ -67,6 +68,7 @@ GLMtest <- function(methcol, meth_matrix,Y, X1, X2, X3, X4) {
 }
 M_matrix<- t(M_matrix)
 M_matrix <- M_matrix[rownames(M_matrix) %in% rownames(PHENO),]
+write.table(data.frame(Pheno=dim(PHENO), Mval=dim(M_matrix)), file=paste(loc.model, "info.txt", sep="/"))
 system.time(ind.res <- mclapply(setNames(seq_len(ncol(M_matrix)), dimnames(M_matrix)[[2]]), GLMtest, meth_matrix=M_matrix, Y=PHENO$Asthma, X1=PHENO$Batch, X2=PHENO$Age, X3=PHENO$Gender, X4=PHENO$SmokingPregnancy, mc.cores=12))
 
 all.results<-ldply(ind.res,rbind)
